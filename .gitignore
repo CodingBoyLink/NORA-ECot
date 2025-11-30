@@ -1,0 +1,104 @@
+# =====================
+# Python
+# =====================
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.pdb
+*.egg-info/
+*.egg
+dist/
+build/
+
+# Virtual environments
+venv/
+env/
+.venv/
+.env/
+
+# PIP files
+pip-wheel-metadata/
+
+# =====================
+# Jupyter Notebook
+# =====================
+.ipynb_checkpoints/
+profile_default/
+ipython_config.py
+
+# =====================
+# Deep Learning datasets & outputs
+# =====================
+# Large datasets (you should NOT upload)
+data/
+datasets/
+*.h5
+*.hdf5
+*.npz
+*.npy
+*.csv
+*.tsv
+
+# Model checkpoints
+checkpoints/
+models/
+*.pth
+*.pt
+*.ckpt
+*.h5
+
+# TensorBoard logs
+logs/
+runs/
+events.out.tfevents.*
+
+# =====================
+# PyTorch / TensorFlow cache
+# =====================
+*.pt
+*.pth
+*.pb
+*.ckpt
+*.tflite
+*.onnx
+
+# =====================
+# Images & generated files
+# =====================
+outputs/
+results/
+figures/
+samples/
+*.png
+*.jpg
+*.jpeg
+*.bmp
+
+# =====================
+# IDE / Editors
+# =====================
+# VSCode
+.vscode/
+# PyCharm
+.idea/
+
+# =====================
+# OS files
+# =====================
+.DS_Store
+Thumbs.db
+
+# =====================
+# Other
+# =====================
+*.log
+*.tmp
+*.bak
+data_store/
+*.txt
+
+nora/
+LIBERO/
+embodied-CoT-main
+.kiro/
