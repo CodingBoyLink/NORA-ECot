@@ -102,3 +102,4 @@ nora/
 LIBERO/
 embodied-CoT-main
 .kiro/
+.pytest_cache
