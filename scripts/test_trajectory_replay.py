@@ -18,6 +18,13 @@ import os
 import sys
 import glob
 
+# 设置环境变量 - 必须在导入 mujoco/robosuite 之前
+os.environ["MUJOCO_GL"] = "egl"  # 使用 EGL 渲染（无需显示器）
+os.environ["PYOPENGL_PLATFORM"] = "egl"
+# 如果 EGL 不工作，可以尝试 osmesa:
+# os.environ["MUJOCO_GL"] = "osmesa"
+# os.environ["PYOPENGL_PLATFORM"] = "osmesa"
+
 import h5py
 import numpy as np
 
