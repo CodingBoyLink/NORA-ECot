@@ -30,10 +30,10 @@ class LiberoDataSplitter:
     """
     按轨迹划分 95% train / 5% test，确保每个任务都有覆盖。
     
-    支持 LIBERO 四个子集: spatial, object, goal, long
+    支持 LIBERO 四个子集: spatial, object, goal, 10
     """
     
-    VALID_SUBSETS = ['spatial', 'object', 'goal', 'long']
+    VALID_SUBSETS = ['spatial', 'object', 'goal', '10']
     
     def __init__(
         self,
@@ -45,7 +45,7 @@ class LiberoDataSplitter:
         """
         Args:
             data_dir: LIBERO 数据根目录
-            subset: 'spatial' | 'object' | 'goal' | 'long'
+            subset: 'spatial' | 'object' | 'goal' | '10'
             train_ratio: 训练集比例 (default: 0.95)
             seed: 随机种子 (default: 42)
         """

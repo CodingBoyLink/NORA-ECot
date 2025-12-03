@@ -63,7 +63,7 @@ class TrainingConfig:
     # Training phase: 'baseline' | 'text_cot' | 'text_flow_cot'
     phase: str = "baseline"
     
-    # LIBERO subset: 'spatial' | 'object' | 'goal' | 'long'
+    # LIBERO subset: 'spatial' | 'object' | 'goal' | '10'
     libero_subset: str = "spatial"
     
     # LoRA configuration

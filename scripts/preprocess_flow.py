@@ -44,7 +44,7 @@ def parse_args():
     python scripts/preprocess_flow.py --subset goal --vq-model ./models/vq_encoder.pt
     
     # 只处理训练集
-    python scripts/preprocess_flow.py --subset long --split train
+    python scripts/preprocess_flow.py --subset 10 --split train
 """
     )
     
@@ -53,7 +53,7 @@ def parse_args():
         "--subset",
         type=str,
         required=True,
-        choices=["spatial", "object", "goal", "long"],
+        choices=["spatial", "object", "goal", "10"],
         help="LIBERO 子集名称"
     )
     parser.add_argument(

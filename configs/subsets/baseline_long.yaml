@@ -1,11 +1,11 @@
-# Baseline LoRA Training - LIBERO-Long
+# Baseline LoRA Training - LIBERO-10
 # Inherits from baseline.yaml with subset-specific settings
 
 # Training phase
 phase: "baseline"
 
 # LIBERO subset
-libero_subset: "long"
+libero_subset: "10"
 
 # LoRA configuration
 lora:
@@ -26,4 +26,4 @@ optimizer:
   warmup_steps: 1000
 
 # Output configuration
-output_dir: "./outputs/baseline/long"
+output_dir: "./outputs/baseline/10"

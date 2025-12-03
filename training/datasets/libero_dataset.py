@@ -70,7 +70,7 @@ class LiberoBaselineDataset(IterableDataset):
         
         Args:
             data_dir: LIBERO data root directory
-            subset: LIBERO subset ('spatial', 'object', 'goal', 'long')
+            subset: LIBERO subset ('spatial', 'object', 'goal', '10')
             split: 'train' or 'test'
             train_ratio: Train/test split ratio
             seed: Random seed for splitting and shuffling
@@ -316,7 +316,7 @@ class LiberoTextCoTDataset(IterableDataset):
         
         Args:
             data_dir: LIBERO data root directory
-            subset: LIBERO subset ('spatial', 'object', 'goal', 'long')
+            subset: LIBERO subset ('spatial', 'object', 'goal', '10')
             ecot_annotations_path: Path to ECoT annotations JSON file
             split: 'train' or 'test'
             train_ratio: Train/test split ratio
@@ -655,7 +655,7 @@ class LiberoTextFlowCoTDataset(IterableDataset):
         
         Args:
             data_dir: LIBERO data root directory
-            subset: LIBERO subset ('spatial', 'object', 'goal', 'long')
+            subset: LIBERO subset ('spatial', 'object', 'goal', '10')
             ecot_annotations_path: Path to ECoT annotations JSON file
             flow_tokens_path: Path to preprocessed flow tokens JSON file
             split: 'train' or 'test'

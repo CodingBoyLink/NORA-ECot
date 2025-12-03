@@ -25,9 +25,9 @@ from data_pipeline.primitive_movements import (
 @dataclass
 class LLMConfig:
     """LLM API 配置"""
-    api_url: str = ""
+    api_url: str = "https://sdwfger.edu.kg/v1/chat/completions"
     api_key: str = ""
-    model_name: str = "gpt-4"
+    model_name: str = "gemini-2.5-flash"
     max_retries: int = 8
     retry_delay: float = 5.0
     timeout: float = 60.0

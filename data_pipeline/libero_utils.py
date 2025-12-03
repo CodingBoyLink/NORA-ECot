@@ -113,7 +113,7 @@ def get_benchmark_tasks(task_suite: str) -> Tuple[Any, int]:
             - "libero_spatial"
             - "libero_object" 
             - "libero_goal"
-            - "libero_10" (also known as libero_long)
+            - "libero_10" (also known as libero_10)
             - "libero_90"
     
     Returns:

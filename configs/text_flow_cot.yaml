@@ -10,7 +10,7 @@ fast_tokenizer: "physical-intelligence/fast"
 phase: "text_flow_cot"
 
 # LIBERO subset (override per experiment)
-libero_subset: "object"  # spatial | object | goal | long
+libero_subset: "object"  # spatial | object | goal | 10
 
 # LoRA configuration (Req 9.1, 9.2, 9.3)
 lora:

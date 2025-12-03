@@ -50,7 +50,7 @@ def parse_args():
         "--subset",
         type=str,
         default="object",
-        choices=["spatial", "object", "goal", "long"],
+        choices=["spatial", "object", "goal", "10"],
         help="LIBERO subset to train on",
     )
     parser.add_argument(

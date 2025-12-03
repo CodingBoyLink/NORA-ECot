@@ -45,7 +45,7 @@ sys.path.insert(0, str(project_root))
 
 # Constants
 PHASES = ["baseline", "text_cot", "text_flow_cot"]
-SUBSETS = ["spatial", "object", "goal", "long"]
+SUBSETS = ["spatial", "object", "goal", "10"]
 
 
 def setup_logging(log_dir: str, experiment_name: str) -> logging.Logger:
@@ -103,7 +103,7 @@ Examples:
         "--subset",
         type=str,
         choices=SUBSETS,
-        help="LIBERO subset: spatial, object, goal, or long"
+        help="LIBERO subset: spatial, object, goal, or 10"
     )
     parser.add_argument(
         "--all-phases",

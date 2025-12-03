@@ -115,7 +115,7 @@ data/
 │   └── ...
 ├── libero_goal/
 │   └── ...
-└── libero_long/
+└── libero_10/
     └── ...
 ```
 
@@ -148,7 +148,7 @@ python scripts/regenerate_libero.py \
     --libero_raw_data_dir ./data/libero_goal \
     --libero_target_dir ./data/libero_goal_clean
 
-# 重生成 libero_10 (libero_long) 数据集
+# 重生成 libero_10 (libero_10) 数据集
 python scripts/regenerate_libero.py \
     --libero_task_suite libero_10 \
     --libero_raw_data_dir ./data/libero_10 \
@@ -277,7 +277,7 @@ mixed_precision: "bf16"
 | 参数 | 说明 | 默认值 |
 |------|------|--------|
 | `--phase` | 训练阶段 (baseline/text_cot/text_flow_cot) | - |
-| `--subset` | LIBERO 子集 (spatial/object/goal/long) | - |
+| `--subset` | LIBERO 子集 (spatial/object/goal/10) | - |
 | `--data_dir` | 数据目录 | ./data |
 | `--output_dir` | 输出目录 | ./outputs |
 | `--lora_rank` | LoRA 秩 | 16 |
@@ -289,7 +289,7 @@ mixed_precision: "bf16"
 
 评估指标：任务成功率（50 trials/task）
 
-| 模型 | Spatial | Object | Goal | Long |
+| 模型 | Spatial | Object | Goal | 10 |
 |------|---------|--------|------|------|
 | LoRA_B (Baseline) | - | - | - | - |
 | LoRA_T (Text CoT) | - | - | - | - |
@@ -299,7 +299,7 @@ mixed_precision: "bf16"
 
 - [NORA](https://github.com/declare-lab/nora): 基础 VLA 模型
 - [embodied-CoT](https://github.com/embodied-cot/embodied-cot): ECoT 标注方法
-- [LIBERO](https://github.com/Lifelong-Robot-Learning/LIBERO): 机器人操作基准
+- [LIBERO](https://github.com/Life10-Robot-Learning/LIBERO): 机器人操作基准
 - [FAST+](https://github.com/physical-intelligence/fast): 动作离散化编码器
 
 ## License

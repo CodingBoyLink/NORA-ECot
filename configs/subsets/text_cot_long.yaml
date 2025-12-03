@@ -1,11 +1,11 @@
-# Text CoT LoRA Training - LIBERO-Long
+# Text CoT LoRA Training - LIBERO-10
 # Text ECoT + Reasoning Dropout
 
 # Training phase
 phase: "text_cot"
 
 # LIBERO subset
-libero_subset: "long"
+libero_subset: "10"
 
 # LoRA configuration
 lora:
@@ -31,4 +31,4 @@ reasoning_dropout:
   cot_loss_weight: 0.5
 
 # Output configuration
-output_dir: "./outputs/text_cot/long"
+output_dir: "./outputs/text_cot/10"

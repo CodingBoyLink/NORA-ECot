@@ -64,7 +64,7 @@ class EvalConfig:
     # Model type: 'baseline' | 'text_cot' | 'text_flow_cot'
     model_type: str = "baseline"
     
-    # LIBERO subset: 'spatial' | 'object' | 'goal' | 'long' | '10' | '90'
+    # LIBERO subset: 'spatial' | 'object' | 'goal' | '10' | '10' | '90'
     libero_subset: str = "object"
     
     # Evaluation parameters (Req 8.6, 8.7)
@@ -144,8 +144,8 @@ LIBERO_KEYS = {
             0.13928571343421936, 0.15964286029338837, 0.3246428668498993, 1.0
         ])
     ],
-    # Alias for 'long' subset (maps to libero_10)
-    'libero_long': [
+    # Alias for '10' subset (maps to libero_10)
+    'libero_10': [
         np.array([
             -0.6348214149475098, -0.7741071581840515, -0.7633928656578064,
             -0.09749999642372131, -0.14819999992847435, -0.2742857038974762, 0.0
@@ -464,7 +464,7 @@ class LiberoEvaluator:
             'spatial': 'libero_spatial',
             'object': 'libero_object',
             'goal': 'libero_goal',
-            'long': 'libero_10',  # LIBERO-Long is libero_10
+            '10': 'libero_10',  # LIBERO-10 is libero_10
             '10': 'libero_10',
             '90': 'libero_90',
         }
@@ -536,7 +536,7 @@ class LiberoEvaluator:
         )
         inputs = {k: v.to(self.device) for k, v in inputs.items()}
         
-        # Generate with longer max_new_tokens for CoT if needed
+        # Generate with 10er max_new_tokens for CoT if needed
         max_new_tokens = 512 if generate_cot else 256
         generated_ids = self.model.generate(**inputs, max_new_tokens=max_new_tokens)
         

@@ -66,7 +66,7 @@ def parse_args():
         "--libero_subset",
         type=str,
         required=True,
-        choices=["spatial", "object", "goal", "long", "10", "90"],
+        choices=["spatial", "object", "goal", "10", "10", "90"],
         help="LIBERO subset to evaluate on"
     )
     parser.add_argument(
@@ -303,7 +303,7 @@ def evaluate_all_models(
         - 8.9: Support comparison of 12 models
     """
     model_types = ["baseline", "text_cot", "text_flow_cot"]
-    subsets = ["spatial", "object", "goal", "long"]
+    subsets = ["spatial", "object", "goal", "10"]
     
     all_results = {}
     
@@ -361,7 +361,7 @@ def evaluate_all_models(
     print("\n" + "=" * 80)
     print("Complete Evaluation Summary")
     print("=" * 80)
-    print(f"{'Model Type':<20} {'Spatial':<12} {'Object':<12} {'Goal':<12} {'Long':<12}")
+    print(f"{'Model Type':<20} {'Spatial':<12} {'Object':<12} {'Goal':<12} {'10':<12}")
     print("-" * 80)
     
     for model_type in model_types:

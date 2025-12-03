@@ -53,7 +53,7 @@ def parse_args():
         "--subset",
         type=str,
         required=True,
-        choices=["spatial", "object", "goal", "long"],
+        choices=["spatial", "object", "goal", "10"],
         help="LIBERO 子集名称"
     )
     parser.add_argument(

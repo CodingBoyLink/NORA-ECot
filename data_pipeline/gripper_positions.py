@@ -18,7 +18,7 @@ _sam_model = None
 _sam_processor = None
 
 # LIBERO 图像配置
-LIBERO_IMAGE_DIMS = (128, 128)  # LIBERO 默认图像尺寸
+LIBERO_IMAGE_DIMS = (256, 256)  # LIBERO 重生成后图像尺寸 (原始为 128x128)
 LIBERO_IMAGE_KEY = "agentview_rgb"  # LIBERO 主视角图像键名
 
 

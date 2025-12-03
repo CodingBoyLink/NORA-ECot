@@ -1,11 +1,11 @@
-# Text + Flow CoT LoRA Training - LIBERO-Long
+# Text + Flow CoT LoRA Training - LIBERO-10
 # Text CoT + RAFT optical flow + Reasoning Dropout
 
 # Training phase
 phase: "text_flow_cot"
 
 # LIBERO subset
-libero_subset: "long"
+libero_subset: "10"
 
 # LoRA configuration
 lora:
@@ -37,4 +37,4 @@ flow:
   num_flow_tokens: 64
 
 # Output configuration
-output_dir: "./outputs/text_flow_cot/long"
+output_dir: "./outputs/text_flow_cot/10"
