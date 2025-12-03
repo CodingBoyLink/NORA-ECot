@@ -113,7 +113,11 @@ class TrainingConfig:
         if 'lora' in config_dict:
             config_dict['lora'] = LoRAConfig(**config_dict['lora'])
         if 'optimizer' in config_dict:
-            config_dict['optimizer'] = OptimizerConfig(**config_dict['optimizer'])
+            opt_dict = config_dict['optimizer']
+            # Convert betas list back to tuple if needed
+            if 'betas' in opt_dict and isinstance(opt_dict['betas'], list):
+                opt_dict['betas'] = tuple(opt_dict['betas'])
+            config_dict['optimizer'] = OptimizerConfig(**opt_dict)
         if 'reasoning_dropout' in config_dict:
             config_dict['reasoning_dropout'] = ReasoningDropoutConfig(**config_dict['reasoning_dropout'])
         return cls(**config_dict)
@@ -133,7 +137,7 @@ class TrainingConfig:
             },
             'optimizer': {
                 'learning_rate': self.optimizer.learning_rate,
-                'betas': self.optimizer.betas,
+                'betas': list(self.optimizer.betas),  # Convert tuple to list for YAML serialization
                 'weight_decay': self.optimizer.weight_decay,
                 'warmup_steps': self.optimizer.warmup_steps,
             },
