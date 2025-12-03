@@ -32,7 +32,6 @@ ipython_config.py
 # =====================
 # Large datasets (you should NOT upload)
 data/
-datasets/
 *.h5
 *.hdf5
 *.npz
@@ -95,8 +94,7 @@ Thumbs.db
 *.log
 *.tmp
 *.bak
-data_store/
-*.txt
+data/
 
 nora/
 LIBERO/
