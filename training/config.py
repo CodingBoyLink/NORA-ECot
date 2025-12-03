@@ -64,7 +64,7 @@ class TrainingConfig:
     phase: str = "baseline"
     
     # LIBERO subset: 'spatial' | 'object' | 'goal' | 'long'
-    libero_subset: str = "object"
+    libero_subset: str = "spatial"
     
     # LoRA configuration
     lora: LoRAConfig = field(default_factory=LoRAConfig)
