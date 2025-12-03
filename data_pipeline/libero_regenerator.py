@@ -214,6 +214,7 @@ class LiberoDataRegenerator:
         eye_in_hand_images = []
         
         num_noops = 0
+        success = False  # Track if task was completed successfully
         
         # Replay original demo actions
         for action in orig_actions:
@@ -258,6 +259,11 @@ class LiberoDataRegenerator:
             
             # Execute action in environment
             obs, reward, done, info = env.step(action.tolist())
+            
+            # Check if task completed - stop early if successful
+            if done:
+                success = True
+                break
         
         # Package collected data
         data_dict = {
@@ -271,7 +277,7 @@ class LiberoDataRegenerator:
             "eye_in_hand_images": eye_in_hand_images,
         }
         
-        return data_dict, done, num_noops
+        return data_dict, success, num_noops
 
     def save_episode_to_hdf5(
         self,
@@ -463,6 +469,8 @@ class LiberoDataRegenerator:
             
             # Process each episode
             num_episodes = len(orig_data.keys())
+            saved_episode_count = 0  # Track number of successfully saved episodes
+            
             for i in range(num_episodes):
                 # Get demo data
                 demo_data = orig_data[f"demo_{i}"]
@@ -477,9 +485,10 @@ class LiberoDataRegenerator:
                 self.num_noops += episode_noops
                 self.num_replays += 1
                 
-                # Save only successful trajectories
+                # Save only successful trajectories (with consecutive numbering)
                 if success:
-                    self.save_episode_to_hdf5(grp, i, data_dict)
+                    self.save_episode_to_hdf5(grp, saved_episode_count, data_dict)
+                    saved_episode_count += 1
                     self.num_success += 1
                 
                 # Update metainfo (for both success and failure)

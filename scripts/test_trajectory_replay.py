@@ -129,11 +129,14 @@ def replay_trajectory(
     # 加载轨迹数据
     with h5py.File(hdf5_path, 'r') as f:
         demo_keys = list(f['data'].keys())
+        # 按数字排序（demo_0, demo_1, demo_2, ... 而不是字典序）
+        demo_keys = sorted(demo_keys, key=lambda x: int(x.split('_')[1]))
         
         if demo_idx >= len(demo_keys):
             raise IndexError(f"Demo 索引 {demo_idx} 超出范围 (共 {len(demo_keys)} 条轨迹)")
         
         demo_key = demo_keys[demo_idx]
+        print(f"实际加载的 demo key: {demo_key}")
         demo_group = f['data'][demo_key]
         
         # 加载动作和状态
