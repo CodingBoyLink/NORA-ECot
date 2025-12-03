@@ -117,8 +117,22 @@ class ActionTokenizer:
         """
         tokens = np.asarray(tokens, dtype=np.int64)
         
+        # Ensure tokens is a list for FAST+ decode
+        if tokens.ndim == 0:
+            tokens = [int(tokens)]
+        else:
+            tokens = list(tokens)
+        
         # Decode using FAST+ tokenizer
+        # FAST+ decode returns shape (1, time_horizon, action_dim) or similar
         action = self.fast_tokenizer.decode(tokens)
+        
+        # Ensure output shape is (time_horizon, action_dim)
+        action = np.asarray(action)
+        if action.ndim == 3:
+            action = action[0]  # Remove batch dimension
+        elif action.ndim == 1:
+            action = action.reshape(self.time_horizon, self.action_dim)
         
         # Denormalize gripper if needed
         if denormalize_gripper:
