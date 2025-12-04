@@ -10,7 +10,7 @@ fast_tokenizer: "physical-intelligence/fast"
 phase: "baseline"
 
 # LIBERO subset (override per experiment)
-libero_subset: "object"  # spatial | object | goal | 10
+libero_subset: "spatial"  # spatial | object | goal | 10
 
 # LoRA configuration (Req 9.1, 9.2, 9.3)
 lora:
@@ -36,9 +36,12 @@ reasoning_dropout:
   cot_loss_weight: 0.0
 
 # Training hyperparameters
-per_device_batch_size: 16
-gradient_accumulation_steps: 2
-max_train_steps: 100000
+# 4090 24GB 配置：batch_size=8, grad_accum=4
+# 有效batch size = 8 * 4 * 2卡 = 64
+# ~1,467 steps/epoch, 10k steps ≈ 7 epochs
+per_device_batch_size: 8
+gradient_accumulation_steps: 4
+max_train_steps: 10000
 
 # Mixed precision (Req 9.7)
 mixed_precision: "bf16"
@@ -50,10 +53,11 @@ data_seed: 42
 
 # Output configuration
 output_dir: "./outputs"
-checkpoint_save_frequency: 20000
-logging_steps: 100
+checkpoint_save_frequency: 2000
+logging_steps: 50
 
-# Evaluation configuration
+# Evaluation configuration (预留，当前训练代码未使用)
+# 评估需要单独运行 scripts/evaluate.py
 eval_steps: 5000
 num_eval_trials: 50
 max_eval_steps: 500

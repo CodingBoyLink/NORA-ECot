@@ -109,6 +109,9 @@ class TrainingConfig:
     @classmethod
     def from_dict(cls, config_dict: dict) -> "TrainingConfig":
         """Create configuration from dictionary."""
+        # Make a copy to avoid modifying the original
+        config_dict = config_dict.copy()
+        
         # Handle nested configs
         if 'lora' in config_dict:
             config_dict['lora'] = LoRAConfig(**config_dict['lora'])
@@ -120,6 +123,14 @@ class TrainingConfig:
             config_dict['optimizer'] = OptimizerConfig(**opt_dict)
         if 'reasoning_dropout' in config_dict:
             config_dict['reasoning_dropout'] = ReasoningDropoutConfig(**config_dict['reasoning_dropout'])
+        
+        # Remove unknown fields (e.g., 'flow' for text_flow_cot phase)
+        # These are handled separately by the specific trainer
+        valid_fields = {f.name for f in cls.__dataclass_fields__.values()}
+        unknown_fields = set(config_dict.keys()) - valid_fields
+        for field_name in unknown_fields:
+            config_dict.pop(field_name)
+        
         return cls(**config_dict)
     
     def to_dict(self) -> dict:

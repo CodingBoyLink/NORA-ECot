@@ -21,22 +21,31 @@ from data_pipeline.primitive_movements import (
     get_move_primitives_from_states,
     get_state_3d_positions
 )
-from data_pipeline.ecot_annotator import (
-    ECoTAnnotator,
-    LLMConfig,
-    AnnotationConfig,
-    build_prompt,
-    extract_reasoning_dict
-)
-from data_pipeline.libero_utils import (
-    get_libero_env,
-    get_libero_dummy_action,
-    get_benchmark_tasks,
-    LIBERO_AVAILABLE
-)
-from data_pipeline.libero_regenerator import (
-    LiberoDataRegenerator,
-)
+
+# Lazy imports for modules that require optional dependencies (robosuite, libero)
+# These are only needed for data regeneration, not for training
+def _get_ecot_annotator():
+    from data_pipeline.ecot_annotator import (
+        ECoTAnnotator,
+        LLMConfig,
+        AnnotationConfig,
+        build_prompt,
+        extract_reasoning_dict
+    )
+    return ECoTAnnotator, LLMConfig, AnnotationConfig, build_prompt, extract_reasoning_dict
+
+def _get_libero_utils():
+    from data_pipeline.libero_utils import (
+        get_libero_env,
+        get_libero_dummy_action,
+        get_benchmark_tasks,
+        LIBERO_AVAILABLE
+    )
+    return get_libero_env, get_libero_dummy_action, get_benchmark_tasks, LIBERO_AVAILABLE
+
+def _get_libero_regenerator():
+    from data_pipeline.libero_regenerator import LiberoDataRegenerator
+    return LiberoDataRegenerator
 
 __all__ = [
     # raw_loader
@@ -52,17 +61,8 @@ __all__ = [
     "get_move_primitives_trajectory",
     "get_move_primitives_from_states",
     "get_state_3d_positions",
-    # ecot_annotator
-    "ECoTAnnotator",
-    "LLMConfig",
-    "AnnotationConfig",
-    "build_prompt",
-    "extract_reasoning_dict",
-    # libero_utils
-    "get_libero_env",
-    "get_libero_dummy_action",
-    "get_benchmark_tasks",
-    "LIBERO_AVAILABLE",
-    # libero_regenerator
-    "LiberoDataRegenerator",
+    # lazy imports (access via functions)
+    "_get_ecot_annotator",
+    "_get_libero_utils",
+    "_get_libero_regenerator",
 ]

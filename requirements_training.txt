@@ -28,7 +28,7 @@ h5py  # For HDF5 data loading
 
 # Configuration
 pyyaml
-omegaconf
+# omegaconf  # Not currently used, optional
 
 # Optical flow (Phase C)
 # torchvision already includes RAFT models
@@ -40,6 +40,9 @@ pytest-cov
 # Utilities
 tqdm
 einops
+
+# OpenCV for image processing (used by VQ encoder)
+opencv-python
 
 # FAST+ tokenizer (from physical-intelligence)
 # Install separately: pip install git+https://github.com/physical-intelligence/fast.git
