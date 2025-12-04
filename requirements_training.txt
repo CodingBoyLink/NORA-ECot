@@ -18,7 +18,7 @@ accelerate>=1.5.2
 wandb
 
 # Flash attention (optional, for faster training)
-flash-attn>=2.6.1  # Uncomment if CUDA available and want faster attention
+#flash-attn>=2.6.1  # Uncomment if CUDA available and want faster attention
 
 # Data processing
 numpy>=1.26.4
@@ -45,4 +45,6 @@ einops
 opencv-python
 
 # FAST+ tokenizer (from physical-intelligence)
-# Install separately: pip install git+https://github.com/physical-intelligence/fast.git
+# 通过 HuggingFace 自动下载，无需单独安装
+# 使用 AutoProcessor.from_pretrained("physical-intelligence/fast", trust_remote_code=True)
+# 首次运行时会自动从 HuggingFace 下载代码和权重
