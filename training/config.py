@@ -87,6 +87,7 @@ class TrainingConfig:
     data_dir: str = "./data"
     train_split_ratio: float = 0.95
     data_seed: int = 42
+    num_workers: int = 4  # DataLoader workers
     
     # Output configuration
     output_dir: str = "./outputs"
@@ -163,6 +164,7 @@ class TrainingConfig:
             'data_dir': self.data_dir,
             'train_split_ratio': self.train_split_ratio,
             'data_seed': self.data_seed,
+            'num_workers': self.num_workers,
             'output_dir': self.output_dir,
             'checkpoint_save_frequency': self.checkpoint_save_frequency,
             'logging_steps': self.logging_steps,

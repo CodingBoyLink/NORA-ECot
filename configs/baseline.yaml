@@ -50,6 +50,7 @@ mixed_precision: "bf16"
 data_dir: "./data"
 train_split_ratio: 0.95
 data_seed: 42
+num_workers: 4  # DataLoader workers (8核CPU建议4)
 
 # Output configuration
 output_dir: "./outputs"

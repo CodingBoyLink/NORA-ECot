@@ -26,7 +26,7 @@ from tqdm import tqdm
 from training.config import TrainingConfig
 from training.lora_model import load_model_with_lora, save_lora_weights, print_trainable_parameters
 from training.action_tokenizer import ActionTokenizer
-from training.datasets.libero_dataset import LiberoBaselineDataset
+from training.datasets.libero_dataset import LiberoBaselineDataset, LiberoMapDataset
 from training.datasets.baseline_collator import BaselineCollator
 
 
@@ -107,9 +107,10 @@ class LoRATrainer:
             tokenizer_path=self.config.fast_tokenizer,
         )
         
-        # Create dataset
+        # Create dataset (use Map-style for multi-worker support)
         logger.info(f"Loading dataset for {self.config.libero_subset}")
-        train_dataset = LiberoBaselineDataset(
+        logger.info("Loading all samples into memory for faster training...")
+        train_dataset = LiberoMapDataset(
             data_dir=self.config.data_dir,
             subset=self.config.libero_subset,
             split="train",
@@ -117,17 +118,24 @@ class LoRATrainer:
             seed=self.config.data_seed,
             action_tokenizer=self.action_tokenizer,
             normalize_gripper=True,
-            shuffle=True,
         )
+        logger.info(f"Loaded {len(train_dataset)} samples into memory")
         
         # Create collator
         collator = BaselineCollator(processor=self.processor)
         
-        # Create dataloader
+        # Create dataloader with multi-worker support
+        num_workers = getattr(self.config, 'num_workers', 4)
+        logger.info(f"Using {num_workers} DataLoader workers")
         self.train_dataloader = DataLoader(
             train_dataset,
             batch_size=self.config.per_device_batch_size,
+            shuffle=True,  # Shuffle for Map-style dataset
             collate_fn=collator,
+            num_workers=num_workers,
+            pin_memory=True,
+            prefetch_factor=2 if num_workers > 0 else None,
+            persistent_workers=True if num_workers > 0 else False,
         )
         
         # Initialize optimizer (Req 3.7)
