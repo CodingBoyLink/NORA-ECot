@@ -147,17 +147,19 @@ class LoRATrainer:
             eps=1e-8,
         )
         
-        # Initialize learning rate scheduler (Req 3.8)
+        # Prepare with accelerator first (before creating scheduler)
+        self.model, self.optimizer, self.train_dataloader = self.accelerator.prepare(
+            self.model, self.optimizer, self.train_dataloader
+        )
+        
+        # Initialize learning rate scheduler AFTER prepare (Req 3.8)
+        # Note: Do NOT pass lr_scheduler to accelerator.prepare() as we manually
+        # call lr_scheduler.step() only after sync_gradients
         self.lr_scheduler = get_scheduler(
             name="cosine",
             optimizer=self.optimizer,
             num_warmup_steps=self.config.optimizer.warmup_steps,
             num_training_steps=self.config.max_train_steps,
-        )
-        
-        # Prepare with accelerator (include lr_scheduler for proper checkpoint handling)
-        self.model, self.optimizer, self.train_dataloader, self.lr_scheduler = self.accelerator.prepare(
-            self.model, self.optimizer, self.train_dataloader, self.lr_scheduler
         )
         
         logger.info("Trainer setup complete")
@@ -479,17 +481,18 @@ class TextCoTTrainer(LoRATrainer):
             eps=1e-8,
         )
         
-        # Initialize learning rate scheduler (Req 3.8)
+        # Prepare with accelerator first (before creating scheduler)
+        self.model, self.optimizer, self.train_dataloader = self.accelerator.prepare(
+            self.model, self.optimizer, self.train_dataloader
+        )
+        
+        # Initialize learning rate scheduler AFTER prepare (Req 3.8)
+        # Note: Do NOT pass lr_scheduler to accelerator.prepare()
         self.lr_scheduler = get_scheduler(
             name="cosine",
             optimizer=self.optimizer,
             num_warmup_steps=self.config.optimizer.warmup_steps,
             num_training_steps=self.config.max_train_steps,
-        )
-        
-        # Prepare with accelerator (include lr_scheduler for proper checkpoint handling)
-        self.model, self.optimizer, self.train_dataloader, self.lr_scheduler = self.accelerator.prepare(
-            self.model, self.optimizer, self.train_dataloader, self.lr_scheduler
         )
         
         logger.info("Text CoT trainer setup complete")
@@ -828,17 +831,18 @@ class TextFlowCoTTrainer(LoRATrainer):
             eps=1e-8,
         )
         
-        # Initialize learning rate scheduler (Req 3.8)
+        # Prepare with accelerator first (before creating scheduler)
+        self.model, self.optimizer, self.train_dataloader = self.accelerator.prepare(
+            self.model, self.optimizer, self.train_dataloader
+        )
+        
+        # Initialize learning rate scheduler AFTER prepare (Req 3.8)
+        # Note: Do NOT pass lr_scheduler to accelerator.prepare()
         self.lr_scheduler = get_scheduler(
             name="cosine",
             optimizer=self.optimizer,
             num_warmup_steps=self.config.optimizer.warmup_steps,
             num_training_steps=self.config.max_train_steps,
-        )
-        
-        # Prepare with accelerator (include lr_scheduler for proper checkpoint handling)
-        self.model, self.optimizer, self.train_dataloader, self.lr_scheduler = self.accelerator.prepare(
-            self.model, self.optimizer, self.train_dataloader, self.lr_scheduler
         )
         
         logger.info("Text + Flow CoT trainer setup complete")

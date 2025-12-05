@@ -25,9 +25,9 @@ from data_pipeline.primitive_movements import (
 @dataclass
 class LLMConfig:
     """LLM API 配置"""
-    api_url: str = "https://sdwfger.edu.kg/v1/chat/completions"
-    api_key: str = ""
-    model_name: str = "gemini-2.5-flash"
+    api_url: str = ""  # 通过命令行参数传入
+    api_key: str = ""  # 通过命令行参数或环境变量传入
+    model_name: str = "gpt-4"  # 默认模型
     max_retries: int = 8
     retry_delay: float = 5.0
     timeout: float = 60.0
@@ -235,8 +235,26 @@ def find_task_occurrences(
     for tag in tags:
         pattern += r"\s*<" + tag + r">([^<]*)<\/" + tag + ">"
     
-    matches = re.findall(pattern, input_string)
+    matches = re.findall(pattern, input_string, re.DOTALL)
     return matches
+
+
+def extract_single_tag(text: str, tag: str) -> Optional[str]:
+    """
+    从文本中提取单个标签的内容。
+    
+    Args:
+        text: 输入文本
+        tag: 标签名
+    
+    Returns:
+        str: 标签内容，如果未找到返回 None
+    """
+    pattern = rf"<{tag}>(.*?)</{tag}>"
+    match = re.search(pattern, text, re.DOTALL)
+    if match:
+        return match.group(1).strip()
+    return None
 
 
 def extract_reasoning_dict(
@@ -245,6 +263,10 @@ def extract_reasoning_dict(
 ) -> Dict[int, Dict[str, str]]:
     """
     从 LLM 输出中提取推理字典。
+    
+    支持两种格式：
+    1. 严格格式: 所有标签在同一行
+    2. 宽松格式: 按 step_id 分块，逐个提取标签
     
     Args:
         reasoning_output: LLM 输出字符串
@@ -257,11 +279,35 @@ def extract_reasoning_dict(
         return {}
     
     trajectory = {}
-    matches = find_task_occurrences(reasoning_output, tags)
     
-    for match in matches:
-        step_id = int(match[0])
-        trajectory[step_id] = dict(zip(tags, match[1:]))
+    # 方法1: 尝试严格匹配
+    matches = find_task_occurrences(reasoning_output, tags)
+    if matches:
+        for match in matches:
+            step_id = int(match[0])
+            trajectory[step_id] = dict(zip(tags, match[1:]))
+        return trajectory
+    
+    # 方法2: 宽松匹配 - 按 step_id 分块解析
+    # 匹配格式: "0:" 或 "**0:**" 或 "### 0:" 等
+    step_pattern = r'(?:^|\n)\s*(?:\*\*)?(\d+)(?:\*\*)?[:\s]'
+    step_matches = list(re.finditer(step_pattern, reasoning_output))
+    
+    for i, match in enumerate(step_matches):
+        step_id = int(match.group(1))
+        start_pos = match.end()
+        end_pos = step_matches[i + 1].start() if i + 1 < len(step_matches) else len(reasoning_output)
+        
+        step_text = reasoning_output[start_pos:end_pos]
+        step_reasoning = {}
+        
+        for tag in tags:
+            content = extract_single_tag(step_text, tag)
+            if content:
+                step_reasoning[tag] = content
+        
+        if step_reasoning:
+            trajectory[step_id] = step_reasoning
     
     return trajectory
 
@@ -272,21 +318,31 @@ def format_reasoning_as_tags(reasoning_dict: Dict[str, str]) -> str:
     
     Args:
         reasoning_dict: {tag: value} 格式的推理字典
+                       键为小写标签名: task, plan, subtask, subtask_reason, move, move_reason
     
     Returns:
         str: @tag@value@tag@value... 格式的字符串
     """
-    from training.utils.cot_utils import get_cot_database_keys, get_cot_tags_list
+    # 直接定义映射，避免导入 training 模块（可能有 peft 等依赖）
+    # 小写标签名 -> 输出格式标签
+    tag_mapping = {
+        "task": "TASK:",
+        "plan": "PLAN:",
+        "subtask": "SUBTASK:",
+        "subtask_reason": "SUBTASK REASONING:",
+        "move": "MOVE:",
+        "move_reason": "MOVE REASONING:",
+    }
     
-    db_keys = get_cot_database_keys()
-    tags_order = get_cot_tags_list()[:-1]  # 排除 ACTION
+    # 输出顺序
+    tags_order = ["task", "plan", "subtask", "subtask_reason", "move", "move_reason"]
     
     parts = []
     for tag in tags_order:
-        db_key = db_keys.get(tag)
-        if db_key and db_key in reasoning_dict:
-            value = reasoning_dict[db_key]
-            parts.append(f"@{tag}@{value}")
+        if tag in reasoning_dict:
+            value = reasoning_dict[tag]
+            output_tag = tag_mapping.get(tag, tag.upper() + ":")
+            parts.append(f"@{output_tag}@{value}")
     
     return "".join(parts)
 
@@ -413,8 +469,18 @@ class ECoTAnnotator:
         
         if self.annotation_config.verbose and reasoning_output:
             print(f"LLM 响应长度: {len(reasoning_output)}")
+            # 保存原始响应用于调试
+            debug_path = "annotations/debug_llm_response.txt"
+            os.makedirs(os.path.dirname(debug_path), exist_ok=True)
+            with open(debug_path, 'w', encoding='utf-8') as f:
+                f.write(reasoning_output)
+            print(f"LLM 原始响应已保存到: {debug_path}")
         
-        return extract_reasoning_dict(reasoning_output)
+        result = extract_reasoning_dict(reasoning_output)
+        if self.annotation_config.verbose:
+            print(f"解析到 {len(result)} 个步骤的推理")
+        
+        return result
     
     def annotate_trajectory(
         self,
