@@ -29,6 +29,7 @@ optimizer:
   betas: [0.9, 0.95]
   weight_decay: 1.0e-8
   warmup_steps: 1000
+  max_grad_norm: 1.0  # Gradient clipping
 
 # Reasoning Dropout (not used in baseline, but included for consistency)
 reasoning_dropout:

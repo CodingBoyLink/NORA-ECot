@@ -44,6 +44,8 @@ class OptimizerConfig:
     weight_decay: float = 1e-8
     # Warmup steps for cosine scheduler
     warmup_steps: int = 1000
+    # Gradient clipping max norm
+    max_grad_norm: float = 1.0
 
 
 @dataclass
@@ -152,6 +154,7 @@ class TrainingConfig:
                 'betas': list(self.optimizer.betas),  # Convert tuple to list for YAML serialization
                 'weight_decay': self.optimizer.weight_decay,
                 'warmup_steps': self.optimizer.warmup_steps,
+                'max_grad_norm': self.optimizer.max_grad_norm,
             },
             'reasoning_dropout': {
                 'prob': self.reasoning_dropout.prob,

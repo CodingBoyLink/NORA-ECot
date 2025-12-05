@@ -155,9 +155,9 @@ class LoRATrainer:
             num_training_steps=self.config.max_train_steps,
         )
         
-        # Prepare with accelerator
-        self.model, self.optimizer, self.train_dataloader = self.accelerator.prepare(
-            self.model, self.optimizer, self.train_dataloader
+        # Prepare with accelerator (include lr_scheduler for proper checkpoint handling)
+        self.model, self.optimizer, self.train_dataloader, self.lr_scheduler = self.accelerator.prepare(
+            self.model, self.optimizer, self.train_dataloader, self.lr_scheduler
         )
         
         logger.info("Trainer setup complete")
@@ -209,6 +209,7 @@ class LoRATrainer:
         # Training loop
         completed_steps = 0
         total_loss = 0.0
+        num_loss_samples = 0  # Track number of samples for accurate averaging
         progress_bar = tqdm(
             range(self.config.max_train_steps),
             disable=not self.accelerator.is_local_main_process,
@@ -223,40 +224,53 @@ class LoRATrainer:
                     # Forward pass
                     outputs = self.model(**batch)
                     loss = outputs.loss
-                    total_loss += loss.detach().float()
                     
                     # Backward pass
                     self.accelerator.backward(loss)
                     
-                    # Update weights
+                    # Gradient clipping (before optimizer step)
                     if self.accelerator.sync_gradients:
+                        max_grad_norm = getattr(self.config.optimizer, 'max_grad_norm', 1.0)
+                        self.accelerator.clip_grad_norm_(self.model.parameters(), max_norm=max_grad_norm)
+                    
+                    # Optimizer step (handled by accumulate context)
+                    self.optimizer.step()
+                    
+                    # Update step counter and LR scheduler only after gradient sync
+                    if self.accelerator.sync_gradients:
+                        self.lr_scheduler.step()
                         progress_bar.update(1)
                         completed_steps += 1
+                        
+                        # Accumulate loss only after gradient sync (per actual step)
+                        # Gather loss from all processes for accurate logging
+                        gathered_loss = self.accelerator.gather(loss.detach()).mean()
+                        total_loss += gathered_loss.item()
+                        num_loss_samples += 1
+                
+                # Logging (only on main process and after gradient sync)
+                if self.accelerator.sync_gradients:
+                    if completed_steps % self.config.logging_steps == 0 and completed_steps > 0:
+                        if self.accelerator.is_main_process:
+                            lr = self.lr_scheduler.get_last_lr()[0]
+                            avg_loss = total_loss / num_loss_samples if num_loss_samples > 0 else 0.0
+                            
+                            logger.info(f"Step {completed_steps}, Loss: {avg_loss:.4f}, LR: {lr:.2e}")
+                            
+                            if self.use_wandb:
+                                import wandb
+                                wandb.log({
+                                    "train_loss": avg_loss,
+                                    "learning_rate": lr,
+                                    "step": completed_steps,
+                                })
+                            
+                            total_loss = 0.0
+                            num_loss_samples = 0
                     
-                    self.optimizer.step()
-                    self.lr_scheduler.step()
-                
-                # Logging
-                if completed_steps % self.config.logging_steps == 0 and completed_steps > 0:
-                    if self.accelerator.is_main_process:
-                        lr = self.lr_scheduler.get_last_lr()[0]
-                        avg_loss = total_loss.item() / self.config.logging_steps
-                        
-                        logger.info(f"Step {completed_steps}, Loss: {loss.item():.4f}, LR: {lr:.2e}")
-                        
-                        if self.use_wandb:
-                            import wandb
-                            wandb.log({
-                                "train_loss": loss.item(),
-                                "learning_rate": lr,
-                                "step": completed_steps,
-                            })
-                        
-                        total_loss = 0.0
-                
-                # Checkpointing
-                if completed_steps % self.config.checkpoint_save_frequency == 0 and completed_steps > 0:
-                    self._save_checkpoint(completed_steps, output_dir)
+                    # Checkpointing (only after gradient sync)
+                    if completed_steps % self.config.checkpoint_save_frequency == 0 and completed_steps > 0:
+                        self._save_checkpoint(completed_steps, output_dir)
                 
                 if completed_steps >= self.config.max_train_steps:
                     break
@@ -284,14 +298,18 @@ class LoRATrainer:
             output_dir: Output directory
             is_final: Whether this is the final checkpoint
         """
+        # Wait for all processes before saving (must be called by all processes)
+        self.accelerator.wait_for_everyone()
+        
         checkpoint_name = "final" if is_final else f"step_{step}"
         checkpoint_path = output_dir / checkpoint_name
         
-        # Save accelerator state (optimizer, scheduler, etc.)
+        # Save accelerator state (handles multi-GPU automatically)
         self.accelerator.save_state(str(checkpoint_path))
         
-        # Save LoRA weights separately
+        # Only main process saves additional files
         if self.accelerator.is_main_process:
+            # Save LoRA weights separately
             lora_path = checkpoint_path / "lora_weights"
             unwrapped_model = self.accelerator.unwrap_model(self.model)
             save_lora_weights(unwrapped_model, str(lora_path))
@@ -469,9 +487,9 @@ class TextCoTTrainer(LoRATrainer):
             num_training_steps=self.config.max_train_steps,
         )
         
-        # Prepare with accelerator
-        self.model, self.optimizer, self.train_dataloader = self.accelerator.prepare(
-            self.model, self.optimizer, self.train_dataloader
+        # Prepare with accelerator (include lr_scheduler for proper checkpoint handling)
+        self.model, self.optimizer, self.train_dataloader, self.lr_scheduler = self.accelerator.prepare(
+            self.model, self.optimizer, self.train_dataloader, self.lr_scheduler
         )
         
         logger.info("Text CoT trainer setup complete")
@@ -565,6 +583,7 @@ class TextCoTTrainer(LoRATrainer):
         # Training loop
         completed_steps = 0
         total_loss = 0.0
+        num_loss_samples = 0
         num_full_cot = 0
         num_no_cot = 0
         progress_bar = tqdm(
@@ -586,7 +605,6 @@ class TextCoTTrainer(LoRATrainer):
                     
                     # Compute loss (with CoT auxiliary loss if applicable)
                     loss = self._compute_cot_loss(outputs, {'is_full_cot': is_full_cot})
-                    total_loss += loss.detach().float()
                     
                     # Track CoT mode statistics
                     if is_full_cot is not None:
@@ -596,45 +614,58 @@ class TextCoTTrainer(LoRATrainer):
                     # Backward pass
                     self.accelerator.backward(loss)
                     
-                    # Update weights
+                    # Gradient clipping
                     if self.accelerator.sync_gradients:
+                        max_grad_norm = getattr(self.config.optimizer, 'max_grad_norm', 1.0)
+                        self.accelerator.clip_grad_norm_(self.model.parameters(), max_norm=max_grad_norm)
+                    
+                    # Optimizer step (handled by accumulate context)
+                    self.optimizer.step()
+                    
+                    # Update step counter and LR scheduler only after gradient sync
+                    if self.accelerator.sync_gradients:
+                        self.lr_scheduler.step()
                         progress_bar.update(1)
                         completed_steps += 1
+                        
+                        # Accumulate loss after gradient sync
+                        gathered_loss = self.accelerator.gather(loss.detach()).mean()
+                        total_loss += gathered_loss.item()
+                        num_loss_samples += 1
+                
+                # Logging (only on main process and after gradient sync)
+                if self.accelerator.sync_gradients:
+                    if completed_steps % self.config.logging_steps == 0 and completed_steps > 0:
+                        if self.accelerator.is_main_process:
+                            lr = self.lr_scheduler.get_last_lr()[0]
+                            avg_loss = total_loss / num_loss_samples if num_loss_samples > 0 else 0.0
+                            
+                            # Calculate CoT mode ratio
+                            total_samples = num_full_cot + num_no_cot
+                            full_cot_ratio = num_full_cot / total_samples if total_samples > 0 else 0
+                            
+                            logger.info(
+                                f"Step {completed_steps}, Loss: {avg_loss:.4f}, "
+                                f"LR: {lr:.2e}, Full CoT ratio: {full_cot_ratio:.2%}"
+                            )
+                            
+                            if self.use_wandb:
+                                import wandb
+                                wandb.log({
+                                    "train_loss": avg_loss,
+                                    "learning_rate": lr,
+                                    "full_cot_ratio": full_cot_ratio,
+                                    "step": completed_steps,
+                                })
+                            
+                            total_loss = 0.0
+                            num_loss_samples = 0
+                            num_full_cot = 0
+                            num_no_cot = 0
                     
-                    self.optimizer.step()
-                    self.lr_scheduler.step()
-                
-                # Logging
-                if completed_steps % self.config.logging_steps == 0 and completed_steps > 0:
-                    if self.accelerator.is_main_process:
-                        lr = self.lr_scheduler.get_last_lr()[0]
-                        avg_loss = total_loss.item() / self.config.logging_steps
-                        
-                        # Calculate CoT mode ratio
-                        total_samples = num_full_cot + num_no_cot
-                        full_cot_ratio = num_full_cot / total_samples if total_samples > 0 else 0
-                        
-                        logger.info(
-                            f"Step {completed_steps}, Loss: {loss.item():.4f}, "
-                            f"LR: {lr:.2e}, Full CoT ratio: {full_cot_ratio:.2%}"
-                        )
-                        
-                        if self.use_wandb:
-                            import wandb
-                            wandb.log({
-                                "train_loss": loss.item(),
-                                "learning_rate": lr,
-                                "full_cot_ratio": full_cot_ratio,
-                                "step": completed_steps,
-                            })
-                        
-                        total_loss = 0.0
-                        num_full_cot = 0
-                        num_no_cot = 0
-                
-                # Checkpointing
-                if completed_steps % self.config.checkpoint_save_frequency == 0 and completed_steps > 0:
-                    self._save_checkpoint(completed_steps, output_dir)
+                    # Checkpointing (only after gradient sync)
+                    if completed_steps % self.config.checkpoint_save_frequency == 0 and completed_steps > 0:
+                        self._save_checkpoint(completed_steps, output_dir)
                 
                 if completed_steps >= self.config.max_train_steps:
                     break
@@ -805,9 +836,9 @@ class TextFlowCoTTrainer(LoRATrainer):
             num_training_steps=self.config.max_train_steps,
         )
         
-        # Prepare with accelerator
-        self.model, self.optimizer, self.train_dataloader = self.accelerator.prepare(
-            self.model, self.optimizer, self.train_dataloader
+        # Prepare with accelerator (include lr_scheduler for proper checkpoint handling)
+        self.model, self.optimizer, self.train_dataloader, self.lr_scheduler = self.accelerator.prepare(
+            self.model, self.optimizer, self.train_dataloader, self.lr_scheduler
         )
         
         logger.info("Text + Flow CoT trainer setup complete")
@@ -903,6 +934,7 @@ class TextFlowCoTTrainer(LoRATrainer):
         # Training loop
         completed_steps = 0
         total_loss = 0.0
+        num_loss_samples = 0
         num_full_cot = 0
         num_no_cot = 0
         progress_bar = tqdm(
@@ -924,7 +956,6 @@ class TextFlowCoTTrainer(LoRATrainer):
                     
                     # Compute loss (with CoT + Flow auxiliary loss if applicable)
                     loss = self._compute_cot_flow_loss(outputs, {'is_full_cot': is_full_cot})
-                    total_loss += loss.detach().float()
                     
                     # Track CoT mode statistics
                     if is_full_cot is not None:
@@ -934,45 +965,58 @@ class TextFlowCoTTrainer(LoRATrainer):
                     # Backward pass
                     self.accelerator.backward(loss)
                     
-                    # Update weights
+                    # Gradient clipping
                     if self.accelerator.sync_gradients:
+                        max_grad_norm = getattr(self.config.optimizer, 'max_grad_norm', 1.0)
+                        self.accelerator.clip_grad_norm_(self.model.parameters(), max_norm=max_grad_norm)
+                    
+                    # Optimizer step (handled by accumulate context)
+                    self.optimizer.step()
+                    
+                    # Update step counter and LR scheduler only after gradient sync
+                    if self.accelerator.sync_gradients:
+                        self.lr_scheduler.step()
                         progress_bar.update(1)
                         completed_steps += 1
+                        
+                        # Accumulate loss after gradient sync
+                        gathered_loss = self.accelerator.gather(loss.detach()).mean()
+                        total_loss += gathered_loss.item()
+                        num_loss_samples += 1
+                
+                # Logging (only on main process and after gradient sync)
+                if self.accelerator.sync_gradients:
+                    if completed_steps % self.config.logging_steps == 0 and completed_steps > 0:
+                        if self.accelerator.is_main_process:
+                            lr = self.lr_scheduler.get_last_lr()[0]
+                            avg_loss = total_loss / num_loss_samples if num_loss_samples > 0 else 0.0
+                            
+                            # Calculate CoT mode ratio
+                            total_samples = num_full_cot + num_no_cot
+                            full_cot_ratio = num_full_cot / total_samples if total_samples > 0 else 0
+                            
+                            logger.info(
+                                f"Step {completed_steps}, Loss: {avg_loss:.4f}, "
+                                f"LR: {lr:.2e}, Full CoT ratio: {full_cot_ratio:.2%}"
+                            )
+                            
+                            if self.use_wandb:
+                                import wandb
+                                wandb.log({
+                                    "train_loss": avg_loss,
+                                    "learning_rate": lr,
+                                    "full_cot_ratio": full_cot_ratio,
+                                    "step": completed_steps,
+                                })
+                            
+                            total_loss = 0.0
+                            num_loss_samples = 0
+                            num_full_cot = 0
+                            num_no_cot = 0
                     
-                    self.optimizer.step()
-                    self.lr_scheduler.step()
-                
-                # Logging
-                if completed_steps % self.config.logging_steps == 0 and completed_steps > 0:
-                    if self.accelerator.is_main_process:
-                        lr = self.lr_scheduler.get_last_lr()[0]
-                        avg_loss = total_loss.item() / self.config.logging_steps
-                        
-                        # Calculate CoT mode ratio
-                        total_samples = num_full_cot + num_no_cot
-                        full_cot_ratio = num_full_cot / total_samples if total_samples > 0 else 0
-                        
-                        logger.info(
-                            f"Step {completed_steps}, Loss: {loss.item():.4f}, "
-                            f"LR: {lr:.2e}, Full CoT ratio: {full_cot_ratio:.2%}"
-                        )
-                        
-                        if self.use_wandb:
-                            import wandb
-                            wandb.log({
-                                "train_loss": loss.item(),
-                                "learning_rate": lr,
-                                "full_cot_ratio": full_cot_ratio,
-                                "step": completed_steps,
-                            })
-                        
-                        total_loss = 0.0
-                        num_full_cot = 0
-                        num_no_cot = 0
-                
-                # Checkpointing
-                if completed_steps % self.config.checkpoint_save_frequency == 0 and completed_steps > 0:
-                    self._save_checkpoint(completed_steps, output_dir)
+                    # Checkpointing (only after gradient sync)
+                    if completed_steps % self.config.checkpoint_save_frequency == 0 and completed_steps > 0:
+                        self._save_checkpoint(completed_steps, output_dir)
                 
                 if completed_steps >= self.config.max_train_steps:
                     break
