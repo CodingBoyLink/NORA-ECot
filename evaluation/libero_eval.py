@@ -39,14 +39,30 @@ try:
 except ImportError:
     process_vision_info = None
 
+# Try to import LIBERO - handle different installation scenarios
+LIBERO_AVAILABLE = False
+benchmark = None
+OffScreenRenderEnv = None
+
 try:
+    # Standard installation: pip install -e . from LIBERO directory
     from libero.libero import benchmark
     from libero.libero.envs import OffScreenRenderEnv
     LIBERO_AVAILABLE = True
 except ImportError:
-    LIBERO_AVAILABLE = False
-    benchmark = None
-    OffScreenRenderEnv = None
+    # Try adding local LIBERO directory to path
+    import sys
+    _libero_path = os.path.join(os.path.dirname(__file__), "..", "LIBERO")
+    if os.path.exists(_libero_path) and _libero_path not in sys.path:
+        sys.path.insert(0, _libero_path)
+        try:
+            from libero.libero import benchmark
+            from libero.libero.envs import OffScreenRenderEnv
+            LIBERO_AVAILABLE = True
+            print(f"Loaded LIBERO from local path: {_libero_path}")
+        except ImportError as e:
+            print(f"Warning: Could not import LIBERO: {e}")
+            print("Please install LIBERO: cd LIBERO && pip install -e .")
 
 
 # Action token ID range consistent with NORA
@@ -412,6 +428,7 @@ class LiberoEvaluator:
         if self.config.lora_path:
             print(f"Loading LoRA weights from: {self.config.lora_path}")
             model = PeftModel.from_pretrained(model, self.config.lora_path)
+            print(f"LoRA config: {model.peft_config}")
         
         model.to(self.device)
         model.eval()
@@ -545,6 +562,12 @@ class LiberoEvaluator:
         # Extract action tokens
         action_mask = (ACTION_TOKEN_MIN <= generated_ids[0]) & (generated_ids[0] <= ACTION_TOKEN_MAX)
         action_indices = torch.where(action_mask)[0]
+        
+        # Debug: print token info
+        print(f"[DEBUG] Total generated tokens: {len(generated_ids[0])}")
+        print(f"[DEBUG] Action tokens found: {len(action_indices)}")
+        if len(action_indices) > 0:
+            print(f"[DEBUG] First 10 action token IDs: {generated_ids[0][action_indices][:10].tolist()}")
         
         if len(action_indices) == 0:
             print("Warning: No action tokens generated, returning zero action")
@@ -683,7 +706,9 @@ class LiberoEvaluator:
             initial_states = task_suite.get_task_init_states(task_id)
             
             # Create environment
+            print(f"\n[Task {task_id}] Creating environment...")
             env, task_description = get_libero_env(task, resolution=256)
+            print(f"[Task {task_id}] Task: {task_description}")
             
             task_episodes, task_successes = 0, 0
             
@@ -691,6 +716,7 @@ class LiberoEvaluator:
             for episode_idx in tqdm(range(self.config.num_trials_per_task), 
                                    desc=f"Task {task_id}", leave=False):
                 
+                print(f"  Episode {episode_idx + 1}/{self.config.num_trials_per_task}", end=" ", flush=True)
                 log_file.write(f"\nTask: {task_description}\n")
                 log_file.write(f"Episode: {episode_idx + 1}\n")
                 
@@ -724,9 +750,15 @@ class LiberoEvaluator:
                             generate_cot=self.config.generate_full_cot
                         )
                         
+                        # Debug: print raw action
+                        print(f"[DEBUG] Raw action from model: {action}")
+                        
                         # Post-process action (Req 8.5)
                         action = normalize_gripper_action(action, binarize=True)
                         action = invert_gripper_action(action)
+                        
+                        # Debug: print processed action
+                        print(f"[DEBUG] After gripper processing: {action}")
                         
                         # Binarize gripper for execution
                         action[..., -1] = np.where(action[..., -1] >= 0.0, 1.0, action[..., -1])
