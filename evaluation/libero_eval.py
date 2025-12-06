@@ -432,7 +432,9 @@ class LiberoEvaluator:
             trust_remote_code=True
         )
         fast_tokenizer.action_dim = 7
-        fast_tokenizer.time_horizon = 5  # Consistent with NORA eval
+        # IMPORTANT: time_horizon must match training setting
+        # Training uses time_horizon=1, so evaluation must also use 1
+        fast_tokenizer.time_horizon = 1
         return fast_tokenizer
     
     def _get_libero_keys(self) -> Tuple[np.ndarray, np.ndarray]:
